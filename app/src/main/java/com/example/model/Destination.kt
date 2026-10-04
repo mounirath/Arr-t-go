@@ -7,9 +7,10 @@ enum class AlarmTone(val id: String, val labelFr: String, val labelAr: String, v
 }
 
 enum class MapStyle(val id: String, val labelFr: String, val labelAr: String, val labelEn: String) {
-    DARK("dark", "Sombre Carto", "داكن", "Carto Dark"),
-    STREET("street", "Rues OSM", "شوارع", "OSM Street"),
-    SATELLITE("satellite", "Satellite", "قمر صناعي", "Satellite")
+    GOOGLE_MAPS("google", "Google Maps", "خرائط جوجل", "Google Maps"),
+    SATELLITE("satellite", "Satellite Google", "قمر صناعي جوجل", "Google Satellite"),
+    TERRAIN("terrain", "Relief Google", "تضاريس جوجل", "Google Terrain"),
+    DARK("dark", "Sombre Carto", "داكن", "Carto Dark")
 }
 
 enum class AppLanguage(val code: String, val label: String, val isRtl: Boolean) {

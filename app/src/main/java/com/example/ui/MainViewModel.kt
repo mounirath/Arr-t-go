@@ -54,10 +54,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _alarmTone = MutableStateFlow(AlarmTone.SIREN)
     val alarmTone: StateFlow<AlarmTone> = _alarmTone.asStateFlow()
 
-    private val _mapStyle = MutableStateFlow(MapStyle.DARK)
+    private val _mapStyle = MutableStateFlow(MapStyle.GOOGLE_MAPS)
     val mapStyle: StateFlow<MapStyle> = _mapStyle.asStateFlow()
 
-    private val _language = MutableStateFlow(AppLanguage.FR)
+    private val _language = MutableStateFlow(AppLanguage.AR)
     val language: StateFlow<AppLanguage> = _language.asStateFlow()
 
     private val _isVibrationEnabled = MutableStateFlow(true)

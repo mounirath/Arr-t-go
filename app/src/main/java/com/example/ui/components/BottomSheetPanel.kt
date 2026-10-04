@@ -1,11 +1,15 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,34 +17,32 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DirectionsTransit
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.Vibration
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,517 +54,658 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.model.AlarmTone
+import com.example.data.FavoritePlace
 import com.example.model.AppLanguage
 import com.example.model.LocationPoint
-import com.example.ui.theme.ArrivaCyan
-import com.example.ui.theme.ArrivaGreen
-import com.example.ui.theme.ArrivaIndigo
+import com.example.service.LocationTracker
 
 @Composable
-fun BottomSheetPanel(
+fun GoogleMapsBottomSheet(
     destination: LocationPoint?,
     alertRadiusMeters: Int,
     onRadiusChange: (Int) -> Unit,
-    selectedTone: AlarmTone,
-    onToneChange: (AlarmTone) -> Unit,
-    isTestingTone: Boolean,
-    onTestToneToggle: () -> Unit,
-    isVibrationEnabled: Boolean,
-    onVibrationToggle: (Boolean) -> Unit,
-    isSimulationMode: Boolean,
-    onSimulationToggle: (Boolean) -> Unit,
+    userDistanceMeters: Float,
     isTripActive: Boolean,
     onStartTrip: () -> Unit,
     onStopTrip: () -> Unit,
     onClearDestination: () -> Unit,
+    onFocusDestinationOnMap: () -> Unit,
     onSaveToFavorites: () -> Unit,
+    favorites: List<FavoritePlace>,
+    onSelectFavorite: (FavoritePlace) -> Unit,
+    onOpenFavoritesManager: () -> Unit,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
     currentLanguage: AppLanguage,
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
-        tonalElevation = 8.dp,
-        shadowElevation = 16.dp,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+        color = Color(0xFF0F1426),
+        border = BorderStroke(1.dp, Color(0xFF1F2942)),
+        shadowElevation = 18.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(horizontal = 18.dp, vertical = 10.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Drag handle pill
+            // Drag handle with "Swipe to expand/minimize map" label
             Box(
                 modifier = Modifier
-                    .width(42.dp)
-                    .height(4.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-            )
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onToggleExpand)
+                    .padding(vertical = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .width(44.dp)
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color(0xFF334155))
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = when (currentLanguage) {
+                            AppLanguage.AR -> "اسحب لتكبير الخريطة"
+                            AppLanguage.EN -> "Swipe to expand map"
+                            AppLanguage.FR -> "Glisser pour agrandir la carte"
+                        },
+                        fontSize = 11.sp,
+                        color = Color(0xFF94A3B8),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Step 1: Destination Summary Card
+            // SECTION 1: Destination Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Click on map hint
+                Text(
+                    text = when (currentLanguage) {
+                        AppLanguage.AR -> "انقر على الخريطة 📍"
+                        AppLanguage.EN -> "Tap on map 📍"
+                        AppLanguage.FR -> "Cliquer sur la carte 📍"
+                    },
+                    fontSize = 12.sp,
+                    color = Color(0xFF94A3B8),
+                    fontWeight = FontWeight.Medium
+                )
+
+                // Title + Step 1 Badge
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = when (currentLanguage) {
+                            AppLanguage.AR -> "وجهة الوصول (المحطة / المكان)"
+                            AppLanguage.EN -> "Destination (Station / Place)"
+                            AppLanguage.FR -> "Destination (Gare / Arrêt)"
+                        },
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // Step 1 Badge
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFFF43F5E), Color(0xFFEA580C))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "1",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+
+            // Destination Card (Matching Screenshot 2)
             if (destination != null) {
                 Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B30)),
+                    border = BorderStroke(1.2.dp, Color(0xFFE11D48).copy(alpha = 0.45f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("destination_card")
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFF43F5E)),
-                            contentAlignment = Alignment.Center
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.DirectionsTransit,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+                            // Clear X button
+                            IconButton(
+                                onClick = onClearDestination,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear",
+                                    tint = Color(0xFF94A3B8),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.weight(1f))
 
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = when (currentLanguage) {
-                                    AppLanguage.AR -> "الوجهة المحددة:"
-                                    AppLanguage.EN -> "Selected Destination:"
-                                    AppLanguage.FR -> "Arrêt / Destination :"
-                                },
-                                fontSize = 11.sp,
-                                color = ArrivaCyan,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = destination.name,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (destination.address.isNotEmpty()) {
+                            // Name & Coordinates
+                            Column(
+                                horizontalAlignment = Alignment.End,
+                                modifier = Modifier.weight(4f)
+                            ) {
                                 Text(
-                                    text = destination.address,
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    text = destination.name,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.End
+                                )
+                                Text(
+                                    text = String.format("%.5f , %.5f", destination.longitude, destination.latitude),
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF94A3B8),
+                                    textAlign = TextAlign.End
+                                )
+                                // Distance badge in cyan
+                                if (userDistanceMeters < Float.MAX_VALUE && userDistanceMeters > 0f) {
+                                    val distStr = if (userDistanceMeters >= 1000f) {
+                                        String.format("km %.1f", userDistanceMeters / 1000f)
+                                    } else {
+                                        "${userDistanceMeters.toInt()} m"
+                                    }
+                                    Text(
+                                        text = distStr,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF00E5FF),
+                                        textAlign = TextAlign.End
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            // Red pin container
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(Color(0xFFEA4335), Color(0xFFF97316))
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
                         }
 
-                        // Save to Favorites Icon Button
-                        IconButton(
-                            onClick = onSaveToFavorites,
-                            modifier = Modifier.testTag("save_favorite_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Favorite,
-                                contentDescription = "Sauvegarder",
-                                tint = Color(0xFFF43F5E)
-                            )
-                        }
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                        // Remove Destination
-                        IconButton(
-                            onClick = onClearDestination,
-                            modifier = Modifier.testTag("clear_destination_button")
+                        // Actions Row: "تركيز على الخريطة" and "محفوظ في المفضلة ★"
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Effacer",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            // Focus on Map
+                            OutlinedButton(
+                                onClick = onFocusDestinationOnMap,
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, Color(0xFF2C3960)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = Color(0xFF1B223C),
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                                    .testTag("btn_focus_on_map")
+                            ) {
+                                Text(
+                                    text = when (currentLanguage) {
+                                        AppLanguage.AR -> "تركيز على الخريطة"
+                                        AppLanguage.EN -> "Focus on map"
+                                        AppLanguage.FR -> "Centrer sur la carte"
+                                    },
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
+                            // Save to Favorites button
+                            OutlinedButton(
+                                onClick = onSaveToFavorites,
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, Color(0xFFD97706).copy(alpha = 0.6f)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = Color(0xFF242236),
+                                    contentColor = Color(0xFFFBBF24)
+                                ),
+                                modifier = Modifier
+                                    .weight(1.2f)
+                                    .height(44.dp)
+                                    .testTag("btn_save_favorite")
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = when (currentLanguage) {
+                                            AppLanguage.AR -> "محفوظ في المفضلة ★"
+                                            AppLanguage.EN -> "Saved in Favorites ★"
+                                            AppLanguage.FR -> "Sauvegarder ★"
+                                        },
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             } else {
-                // Empty Destination Prompt
+                // Empty destination prompt
                 Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                    ),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B30)),
+                    border = BorderStroke(1.dp, Color(0xFF283256)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = when (currentLanguage) {
-                                AppLanguage.AR -> "📍 المس أي مكان على الخريطة لتحديده"
-                                AppLanguage.EN -> "📍 Tap anywhere on map to set destination"
-                                AppLanguage.FR -> "📍 Touchez la carte pour choisir votre arrêt"
+                                AppLanguage.AR -> "ابحث عن محطة في الأعلى أو انقر مباشرة على الخريطة"
+                                AppLanguage.EN -> "Search station above or tap directly on the map"
+                                AppLanguage.FR -> "Recherchez une station ou touchez directement la carte"
                             },
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = when (currentLanguage) {
-                                AppLanguage.AR -> "أو استخدم شريط البحث أعلاه لاختيار محطة قطار أو مترو"
-                                AppLanguage.EN -> "Or use the search bar above to pick a station"
-                                AppLanguage.FR -> "ou utilisez la barre de recherche ci-dessus"
-                            },
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp,
+                            color = Color(0xFF94A3B8),
                             textAlign = TextAlign.Center
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Step 2: Pre-alarm alert radius selector
+            // Quick Favorites Row (Matching Screenshot 2)
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = when (currentLanguage) {
-                        AppLanguage.AR -> "مسافة التنبيه المسبق"
-                        AppLanguage.EN -> "Wake-up Alert Distance"
-                        AppLanguage.FR -> "Rayon d'alerte avant l'arrêt"
-                    },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-                Text(
-                    text = formatDistance(alertRadiusMeters),
-                    color = ArrivaIndigo,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 15.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Quick Radius Preset Buttons
-            val presets = listOf(
-                100 to "100m",
-                300 to "300m",
-                500 to "500m",
-                1000 to "1 km",
-                2000 to "2 km",
-                5000 to "5 km"
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                presets.forEach { (meters, label) ->
-                    val isSelected = alertRadiusMeters == meters
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) ArrivaIndigo else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("radius_preset_$meters")
-                            .clickable { onRadiusChange(meters) }
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(vertical = 7.dp)
-                        )
-                    }
-                }
-            }
-
-            // Slider for fine tuning
-            Slider(
-                value = alertRadiusMeters.toFloat(),
-                onValueChange = { onRadiusChange(it.toInt()) },
-                valueRange = 50f..5000f,
-                colors = SliderDefaults.colors(
-                    thumbColor = ArrivaIndigo,
-                    activeTrackColor = ArrivaIndigo,
-                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("radius_slider")
-            )
-
-            // Dynamic explanation text
-            Text(
-                text = when (currentLanguage) {
-                    AppLanguage.AR -> "🔔 سيرن المنبه عندما تصبح على مسافة ${formatDistance(alertRadiusMeters)} من وجهتك."
-                    AppLanguage.EN -> "🔔 The alarm will ring as soon as you are within ${formatDistance(alertRadiusMeters)}."
-                    AppLanguage.FR -> "🔔 L'alarme sonnera dès que vous serez à ${formatDistance(alertRadiusMeters)} de l'arrêt."
-                },
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Step 3: Alarm Tone & Sound Tester
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(top = 10.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // Manage favorites link
                 Text(
                     text = when (currentLanguage) {
-                        AppLanguage.AR -> "نغمة المنبه"
-                        AppLanguage.EN -> "Alarm Sound Tone"
-                        AppLanguage.FR -> "Sonnerie d'alarme"
+                        AppLanguage.AR -> "إدارة القائمة"
+                        AppLanguage.EN -> "Manage list"
+                        AppLanguage.FR -> "Gérer la liste"
                     },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
+                    fontSize = 12.sp,
+                    color = Color(0xFF60A5FA),
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clickable(onClick = onOpenFavoritesManager)
+                        .padding(4.dp)
                 )
 
-                // Sound Tester Button
-                OutlinedButton(
-                    onClick = onTestToneToggle,
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.testTag("test_tone_button")
-                ) {
-                    Icon(
-                        imageVector = if (isTestingTone) Icons.Default.Stop else Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = if (isTestingTone) Color(0xFFF43F5E) else ArrivaIndigo
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (isTestingTone) {
-                            when (currentLanguage) {
-                                AppLanguage.AR -> "إيقاف"
-                                AppLanguage.EN -> "Stop"
-                                AppLanguage.FR -> "Arrêter"
-                            }
-                        } else {
-                            when (currentLanguage) {
-                                AppLanguage.AR -> "تجربة الصوت"
-                                AppLanguage.EN -> "Test Tone"
-                                AppLanguage.FR -> "Tester le son"
-                            }
-                        },
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                // Label: الأماكن المفضلة المسجلة ★
+                Text(
+                    text = when (currentLanguage) {
+                        AppLanguage.AR -> "الأماكن المفضلة المسجلة ★"
+                        AppLanguage.EN -> "Saved Favorite Places ★"
+                        AppLanguage.FR -> "Lieux favoris enregistrés ★"
+                    },
+                    fontSize = 13.sp,
+                    color = Color(0xFFFBBF24),
+                    fontWeight = FontWeight.Bold
+                )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Tone Chips
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Favorite chips scroll
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                AlarmTone.values().forEach { tone ->
-                    val isSelected = selectedTone == tone
+                items(favorites) { fav ->
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) ArrivaIndigo.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, ArrivaIndigo) else null,
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color(0xFF1A223B),
+                        border = BorderStroke(1.dp, Color(0xFFD97706).copy(alpha = 0.5f)),
                         modifier = Modifier
-                            .weight(1f)
-                            .testTag("tone_${tone.id}")
-                            .clickable { onToneChange(tone) }
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { onSelectFavorite(fav) }
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                                contentDescription = null,
-                                tint = if (isSelected) ArrivaIndigo else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = when (currentLanguage) {
-                                    AppLanguage.AR -> tone.labelAr
-                                    AppLanguage.EN -> tone.labelEn
-                                    AppLanguage.FR -> tone.labelFr
-                                },
+                                text = "★ ${fav.name}",
+                                color = Color.White,
                                 fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // SECTION 2: Pre-alert Distance (Matching Screenshot 2)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Distance badge (e.g. 500 m in cyan)
+                Text(
+                    text = formatDistance(alertRadiusMeters),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF00E5FF)
+                )
+
+                // Title + Step 2 Badge
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = when (currentLanguage) {
+                            AppLanguage.AR -> "مسافة التنبيه المسبق"
+                            AppLanguage.EN -> "Pre-alert Distance"
+                            AppLanguage.FR -> "Distance de réveil anticipé"
+                        },
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFF06B6D4), Color(0xFF3B82F6))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "2",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+
+            // Distance Card with Presets & Slider
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF161B30)),
+                border = BorderStroke(1.dp, Color(0xFF283256)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    // Quick Preset Chips [200m] [500m] [1km] [2km]
+                    val presets = listOf(200, 500, 1000, 2000)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        presets.forEach { dist ->
+                            val isSelected = alertRadiusMeters == dist
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isSelected) Color(0xFF0284C7) else Color(0xFF1E243A),
+                                border = if (isSelected) null else BorderStroke(1.dp, Color(0xFF2E3858)),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .clickable { onRadiusChange(dist) }
+                                    .testTag("preset_$dist")
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = formatDistance(dist),
+                                        fontSize = 13.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) Color.White else Color(0xFF94A3B8)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Slider
+                    Slider(
+                        value = alertRadiusMeters.toFloat(),
+                        onValueChange = { onRadiusChange(it.toInt()) },
+                        valueRange = 100f..5000f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = Color(0xFF00E5FF),
+                            inactiveTrackColor = Color(0xFF252D48)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("radius_slider")
+                    )
+
+                    // Labels below slider
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = when (currentLanguage) {
+                                AppLanguage.AR -> "5 كم (قطار سريع)"
+                                AppLanguage.EN -> "5 km (Express Train)"
+                                AppLanguage.FR -> "5 km (Train rapide)"
+                            },
+                            fontSize = 11.sp,
+                            color = Color(0xFF64748B)
+                        )
+                        Text(
+                            text = when (currentLanguage) {
+                                AppLanguage.AR -> "100 م (حافلة / ترام)"
+                                AppLanguage.EN -> "100 m (Bus / Tram)"
+                                AppLanguage.FR -> "100 m (Bus / Tram)"
+                            },
+                            fontSize = 11.sp,
+                            color = Color(0xFF64748B)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Bell Notification Note (Matching Screenshot 2)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF101524))
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = when (currentLanguage) {
+                                AppLanguage.AR -> "🔔 سيرن المنبه عندما تصبح على مسافة ${formatDistance(alertRadiusMeters)} من وجهتك."
+                                AppLanguage.EN -> "🔔 The alarm will sound when you are ${formatDistance(alertRadiusMeters)} from destination."
+                                AppLanguage.FR -> "🔔 Le réveil sonnera lorsque vous serez à ${formatDistance(alertRadiusMeters)} du lieu."
+                            },
+                            fontSize = 12.sp,
+                            color = Color(0xFFFBBF24),
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Big Gradient CTA Button (Matching Screenshot 2)
+            Button(
+                onClick = {
+                    if (isTripActive) onStopTrip() else onStartTrip()
+                },
+                enabled = destination != null || isTripActive,
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent,
+                    disabledContainerColor = Color(0xFF1E243A)
+                ),
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        if (isTripActive) {
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFFE11D48), Color(0xFFBE123C))
+                            )
+                        } else if (destination != null) {
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFFE11D48), Color(0xFF8B5CF6))
+                            )
+                        } else {
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFF334155), Color(0xFF1E293B))
+                            )
+                        }
+                    )
+                    .testTag("btn_main_action")
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = if (isTripActive) {
+                            when (currentLanguage) {
+                                AppLanguage.AR -> "إيقاف تتبع الرحلة"
+                                AppLanguage.EN -> "Stop Trip & Alarm"
+                                AppLanguage.FR -> "Arrêter le trajet & alarme"
+                            }
+                        } else {
+                            when (currentLanguage) {
+                                AppLanguage.AR -> "بدء تتبع الرحلة والتنبيه"
+                                AppLanguage.EN -> "Start Trip & Alarm"
+                                AppLanguage.FR -> "Démarrer le trajet & réveil"
+                            }
+                        },
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = if (isTripActive) Icons.Default.Stop else Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Step 4: Vibration & Simulation Switches
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Bottom Sponsored Banner (Matching Screenshot 1 & 2)
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFF14192D),
+                border = BorderStroke(1.dp, Color(0xFF222B48)),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Vibration,
-                        contentDescription = null,
-                        tint = ArrivaCyan,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = when (currentLanguage) {
-                            AppLanguage.AR -> "الاهتزاز"
-                            AppLanguage.EN -> "Vibration"
-                            AppLanguage.FR -> "Vibration"
-                        },
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                Switch(
-                    checked = isVibrationEnabled,
-                    onCheckedChange = onVibrationToggle,
-                    colors = SwitchDefaults.colors(checkedThumbColor = ArrivaCyan, checkedTrackColor = ArrivaCyan.copy(alpha = 0.4f)),
-                    modifier = Modifier.testTag("vibration_switch")
-                )
-            }
-
-            // Demo Simulation Mode Switch (Test arrival alarm immediately)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = when (currentLanguage) {
-                            AppLanguage.AR -> "محاكاة الرحلة (تجربة داخلية)"
-                            AppLanguage.EN -> "Demo Simulation Mode"
-                            AppLanguage.FR -> "Mode Démo / Trajet simulé"
-                        },
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = when (currentLanguage) {
-                            AppLanguage.AR -> "يحاكي التقدم نحو المحطة لاختبار المنبه"
-                            AppLanguage.EN -> "Simulates motion toward station to test alarm"
-                            AppLanguage.FR -> "Simule le trajet vers l'arrêt pour tester"
-                        },
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Switch(
-                    checked = isSimulationMode,
-                    onCheckedChange = onSimulationToggle,
-                    modifier = Modifier.testTag("simulation_switch")
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Main CTA: Start / Stop Trip
-            if (!isTripActive) {
-                Button(
-                    onClick = onStartTrip,
-                    enabled = destination != null,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Transparent
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            if (destination != null) {
-                                Brush.horizontalGradient(listOf(ArrivaIndigo, ArrivaCyan))
-                            } else {
-                                Brush.horizontalGradient(listOf(Color.Gray.copy(alpha = 0.5f), Color.Gray.copy(alpha = 0.5f)))
-                            }
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFFFBBF24))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "إعلان ممول",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
                         )
-                        .testTag("start_trip_button")
-                ) {
+                    }
+
                     Text(
-                        text = when (currentLanguage) {
-                            AppLanguage.AR -> "🚀 بدء تتبع الرحلة"
-                            AppLanguage.EN -> "🚀 Start Trip Tracking"
-                            AppLanguage.FR -> "🚀 Démarrer le trajet"
-                        },
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "شريك معتمد • ARRIVA GPS 2026",
+                        fontSize = 11.sp,
+                        color = Color(0xFF94A3B8)
                     )
-                }
-            } else {
-                Button(
-                    onClick = onStopTrip,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF43F5E)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp)
-                        .testTag("stop_trip_button")
-                ) {
+
                     Text(
-                        text = when (currentLanguage) {
-                            AppLanguage.AR -> "🛑 إيقاف الرحلة"
-                            AppLanguage.EN -> "🛑 Stop Trip"
-                            AppLanguage.FR -> "🛑 Arrêter le trajet"
-                        },
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "AD",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF64748B)
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
 
 fun formatDistance(meters: Int): String {
     return if (meters >= 1000) {
-        val km = meters / 1000.0
-        if (meters % 1000 == 0) "${km.toInt()} km" else "%.1f km".format(km)
+        if (meters % 1000 == 0) "${meters / 1000} km" else String.format("%.1f km", meters / 1000f)
     } else {
         "$meters m"
     }
 }
 
 fun formatDistance(meters: Float): String {
-    return if (meters >= 1000f) {
-        "%.1f km".format(meters / 1000f)
-    } else {
-        "${meters.toInt()} m"
-    }
+    if (meters == Float.MAX_VALUE || meters < 0f) return "--"
+    return formatDistance(meters.toInt())
 }

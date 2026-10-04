@@ -40,12 +40,15 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.AppLanguage
 import com.example.model.LocationPoint
+import com.example.service.LocationTracker
 import com.example.ui.MainViewModel
 import com.example.ui.components.AddFavoriteDialog
 import com.example.ui.components.AlarmOverlay
-import com.example.ui.components.BottomSheetPanel
 import com.example.ui.components.FavoritesDialog
-import com.example.ui.components.TopBarAndSearch
+import com.example.ui.components.GoogleMapsBottomSheet
+import com.example.ui.components.GoogleMapsTopBar
+import com.example.ui.components.MapFloatingControls
+import com.example.ui.components.NavigationMenuDialog
 import com.example.ui.components.TripHud
 import com.example.ui.map.ArrivaMapView
 import com.example.ui.theme.ArrivaTheme
@@ -120,6 +123,28 @@ fun ArrivaAppScreen(viewModel: MainViewModel) {
 
     var isFavoritesManagerOpen by remember { mutableStateOf(false) }
     var isAddFavoriteDialogOpen by remember { mutableStateOf(false) }
+    var isNavigationMenuOpen by remember { mutableStateOf(false) }
+    var isFullscreenMap by remember { mutableStateOf(false) }
+    var isSheetExpanded by remember { mutableStateOf(true) }
+
+    // Map control triggers
+    var centerUserTrigger by remember { mutableStateOf(0L) }
+    var centerDestTrigger by remember { mutableStateOf(0L) }
+    var zoomInTrigger by remember { mutableStateOf(0L) }
+    var zoomOutTrigger by remember { mutableStateOf(0L) }
+
+    // Live distance calculation
+    val currentDistance = remember(userLocation.latitude, userLocation.longitude, destination) {
+        val dest = destination
+        if (dest != null) {
+            LocationTracker.calculateDistanceMeters(
+                userLocation.latitude,
+                userLocation.longitude,
+                dest.latitude,
+                dest.longitude
+            )
+        } else Float.MAX_VALUE
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -130,26 +155,44 @@ fun ArrivaAppScreen(viewModel: MainViewModel) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Layer 1: Interactive Full-Screen Leaflet Map
+            // Layer 1: Google Maps Fullscreen Interactive View
             ArrivaMapView(
                 userLocation = userLocation,
                 destination = destination,
                 alertRadiusMeters = alertRadius,
                 mapStyle = mapStyle,
-                isDarkTheme = true,
                 onMapClick = { lat, lng ->
                     viewModel.setMapClickedPoint(lat, lng)
-                }
+                },
+                centerUserTrigger = centerUserTrigger,
+                centerDestTrigger = centerDestTrigger,
+                zoomInTrigger = zoomInTrigger,
+                zoomOutTrigger = zoomOutTrigger
             )
 
-            // Layer 2: Floating Controls over Map
+            // Layer 2: Google Maps Right-Hand Floating Controls (Center, Fullscreen, Layers, + , -)
+            MapFloatingControls(
+                onCenterLocation = { centerUserTrigger++ },
+                isFullscreen = isFullscreenMap,
+                onToggleFullscreen = { isFullscreenMap = !isFullscreenMap },
+                currentMapStyle = mapStyle,
+                onMapStyleChange = viewModel::setMapStyle,
+                onZoomIn = { zoomInTrigger++ },
+                onZoomOut = { zoomOutTrigger++ },
+                currentLanguage = language,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(bottom = if (isFullscreenMap) 20.dp else 130.dp)
+            )
+
+            // Layer 3: Overlaid UI (Top Search & Bottom Sheets)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.statusBars)
             ) {
-                // Top Header, Language, Map style & Search Input
-                TopBarAndSearch(
+                // Top Header, Brand & Google Search Bar
+                GoogleMapsTopBar(
                     query = searchQuery,
                     onQueryChange = viewModel::onSearchQueryChanged,
                     searchResults = searchResults,
@@ -157,27 +200,16 @@ fun ArrivaAppScreen(viewModel: MainViewModel) {
                     onSelectPlace = { place ->
                         viewModel.setDestination(place)
                         viewModel.onSearchQueryChanged("")
+                        centerDestTrigger++
                     },
                     currentLanguage = language,
-                    onLanguageChange = viewModel::setLanguage,
                     currentMapStyle = mapStyle,
                     onMapStyleChange = viewModel::setMapStyle,
-                    favorites = favorites,
-                    onSelectFavorite = { fav ->
-                        viewModel.setDestination(
-                            LocationPoint(
-                                name = fav.name,
-                                address = fav.address,
-                                latitude = fav.latitude,
-                                longitude = fav.longitude
-                            )
-                        )
-                        viewModel.setAlertRadius(fav.defaultRadiusMeters)
-                    },
-                    onOpenFavoritesManager = { isFavoritesManagerOpen = true }
+                    userLocation = userLocation,
+                    onOpenMenu = { isNavigationMenuOpen = true }
                 )
 
-                // Trip Active Floating HUD
+                // Trip Active HUD Bar
                 TripHud(
                     tripState = tripState,
                     userLocation = userLocation,
@@ -188,33 +220,69 @@ fun ArrivaAppScreen(viewModel: MainViewModel) {
                 Spacer(modifier = Modifier.weight(1f))
 
                 // Bottom Configuration & Actions Sheet
-                BottomSheetPanel(
-                    destination = destination,
-                    alertRadiusMeters = alertRadius,
-                    onRadiusChange = viewModel::setAlertRadius,
-                    selectedTone = alarmTone,
-                    onToneChange = viewModel::setAlarmTone,
-                    isTestingTone = isTestingTone,
-                    onTestToneToggle = viewModel::testToneToggle,
-                    isVibrationEnabled = isVibrationEnabled,
-                    onVibrationToggle = viewModel::setVibrationEnabled,
-                    isSimulationMode = isSimulationMode,
-                    onSimulationToggle = viewModel::setSimulationMode,
-                    isTripActive = tripState.isActive,
-                    onStartTrip = viewModel::startTrip,
-                    onStopTrip = viewModel::stopTrip,
-                    onClearDestination = viewModel::clearDestination,
-                    onSaveToFavorites = { isAddFavoriteDialogOpen = true },
-                    currentLanguage = language
-                )
+                AnimatedVisibility(
+                    visible = !isFullscreenMap,
+                    enter = slideInVertically { it },
+                    exit = slideOutVertically { it }
+                ) {
+                    GoogleMapsBottomSheet(
+                        destination = destination,
+                        alertRadiusMeters = alertRadius,
+                        onRadiusChange = viewModel::setAlertRadius,
+                        userDistanceMeters = currentDistance,
+                        isTripActive = tripState.isActive,
+                        onStartTrip = viewModel::startTrip,
+                        onStopTrip = viewModel::stopTrip,
+                        onClearDestination = viewModel::clearDestination,
+                        onFocusDestinationOnMap = { centerDestTrigger++ },
+                        onSaveToFavorites = { isAddFavoriteDialogOpen = true },
+                        favorites = favorites,
+                        onSelectFavorite = { fav ->
+                            viewModel.setDestination(
+                                LocationPoint(
+                                    name = fav.name,
+                                    address = fav.address,
+                                    latitude = fav.latitude,
+                                    longitude = fav.longitude
+                                )
+                            )
+                            viewModel.setAlertRadius(fav.defaultRadiusMeters)
+                            centerDestTrigger++
+                        },
+                        onOpenFavoritesManager = { isFavoritesManagerOpen = true },
+                        isExpanded = isSheetExpanded,
+                        onToggleExpand = { isSheetExpanded = !isSheetExpanded },
+                        currentLanguage = language
+                    )
+                }
             }
 
-            // Layer 3: High Priority Urgent Alarm Overlay (Triggered upon reaching geofence perimeter)
+            // Layer 4: High Priority Urgent Alarm Overlay (Triggered upon reaching geofence perimeter)
             AlarmOverlay(
                 tripState = tripState,
                 currentLanguage = language,
                 onDismissAlarm = viewModel::dismissAlarm,
                 onMuteToggle = viewModel::toggleMute
+            )
+
+            // Navigation / Settings Menu Dialog (Hamburger icon)
+            NavigationMenuDialog(
+                isOpen = isNavigationMenuOpen,
+                onDismiss = { isNavigationMenuOpen = false },
+                currentLanguage = language,
+                onLanguageChange = viewModel::setLanguage,
+                selectedTone = alarmTone,
+                onToneChange = viewModel::setAlarmTone,
+                isTestingTone = isTestingTone,
+                onTestToneToggle = viewModel::testToneToggle,
+                isVibrationEnabled = isVibrationEnabled,
+                onVibrationToggle = viewModel::setVibrationEnabled,
+                isSimulationMode = isSimulationMode,
+                onSimulationToggle = viewModel::setSimulationMode,
+                onOpenFavoritesManager = {
+                    isNavigationMenuOpen = false
+                    isFavoritesManagerOpen = true
+                }
             )
 
             // Dialog: Favorites List & Management
@@ -232,24 +300,25 @@ fun ArrivaAppScreen(viewModel: MainViewModel) {
                         )
                     )
                     viewModel.setAlertRadius(fav.defaultRadiusMeters)
+                    isFavoritesManagerOpen = false
+                    centerDestTrigger++
                 },
                 onDeleteFavorite = viewModel::deleteFavorite,
                 currentLanguage = language
             )
 
-            // Dialog: Add Current Destination to Favorites
-            destination?.let { dest ->
-                AddFavoriteDialog(
-                    isOpen = isAddFavoriteDialogOpen,
-                    onDismiss = { isAddFavoriteDialogOpen = false },
-                    initialName = dest.name,
-                    initialAddress = dest.address,
-                    onConfirm = { name, tag ->
-                        viewModel.saveFavorite(name, tag)
-                    },
-                    currentLanguage = language
-                )
-            }
+            // Dialog: Add Destination to Favorites
+            AddFavoriteDialog(
+                isOpen = isAddFavoriteDialogOpen,
+                onDismiss = { isAddFavoriteDialogOpen = false },
+                initialName = destination?.name ?: "",
+                initialAddress = destination?.address ?: "",
+                onConfirm = { name, tag ->
+                    viewModel.saveFavorite(name, tag)
+                    isAddFavoriteDialogOpen = false
+                },
+                currentLanguage = language
+            )
         }
     }
 }
