@@ -2,8 +2,11 @@ package com.example.ui.map
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -64,13 +67,35 @@ fun ArrivaMapView(
         WebView(context).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            settings.databaseEnabled = true
+            settings.allowFileAccess = true
+            settings.allowContentAccess = true
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true
-            webChromeClient = WebChromeClient()
-            webViewClient = WebViewClient()
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+            webChromeClient = object : WebChromeClient() {
+                override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                    android.util.Log.d("ArrivaMap", "JS Console: ${consoleMessage?.message()}")
+                    return true
+                }
+            }
+
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    view?.evaluateJavascript("if (window.map) { window.map.invalidateSize(); }", null)
+                }
+
+                override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+                    super.onReceivedError(view, request, error)
+                    android.util.Log.e("ArrivaMap", "WebView Error: ${error?.description}")
+                }
+            }
+
             addJavascriptInterface(MapJsBridge(bridgeListener), "Android")
-            loadDataWithBaseURL("https://arriva.local/", generateMapHtml(mapStyle.id), "text/html", "UTF-8", null)
+            loadDataWithBaseURL("https://maps.google.com/", generateMapHtml(mapStyle.id), "text/html", "UTF-8", null)
         }
     }
 
@@ -142,11 +167,28 @@ private fun generateMapHtml(initialStyle: String): String {
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- High Reliability Cloudflare Leaflet CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
-        html, body, #map { width:100%; height:100%; background:#e5e3df; overflow:hidden; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #e5e3df;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background: #e5e3df;
+        }
         .leaflet-control-attribution, .leaflet-control-zoom { display:none !important; }
         
         /* Google Maps Accurate Pulse Marker */
@@ -158,23 +200,23 @@ private fun generateMapHtml(initialStyle: String): String {
             align-items: center;
             justify-content: center;
         }
-        .user-radar-ring {
-            position: absolute;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: rgba(66, 133, 244, 0.22);
-            border: 1.5px solid rgba(66, 133, 244, 0.65);
-            animation: radarPulse 2.2s ease-out infinite;
-        }
         .user-center-dot {
             width: 18px;
             height: 18px;
-            border-radius: 50%;
             background: #1a73e8;
             border: 3px solid #ffffff;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(26, 115, 232, 0.7);
             z-index: 2;
+        }
+        .user-radar-ring {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(26, 115, 232, 0.25);
+            animation: radarPulse 2s infinite ease-out;
+            z-index: 1;
         }
         @keyframes radarPulse {
             0% { transform: scale(0.5); opacity: 1; }
@@ -202,28 +244,32 @@ private fun generateMapHtml(initialStyle: String): String {
     <div id="map"></div>
     <script>
         var map = L.map('map', {
-            center: [36.7538, 3.0588], // Default Algiers / City view matching screenshots
+            center: [36.7538, 3.0588], // Default Algiers / City view
             zoom: 14,
             zoomControl: false,
             attributionControl: false
         });
 
-        // Google Maps & Complementary High-Quality Tiles
+        // Google Maps & Fallback High-Quality Tiles
         var tileLayers = {
-            google: L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            google: L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
                 maxZoom: 20,
                 subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
             }),
-            satellite: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            satellite: L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
                 maxZoom: 20,
                 subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
             }),
-            terrain: L.tileLayer('https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
+            terrain: L.tileLayer('https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
                 maxZoom: 20,
                 subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }),
+            osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
             }),
             dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19
+                maxZoom: 19,
+                subdomains: 'abcd'
             })
         };
 
@@ -231,8 +277,17 @@ private fun generateMapHtml(initialStyle: String): String {
         var currentLayer = tileLayers[currentStyleKey] || tileLayers.google;
         currentLayer.addTo(map);
 
+        // Fallback to OSM if Google tile loading has any network issues
+        var fallbackOsm = tileLayers.osm;
+        tileLayers.google.on('tileerror', function() {
+            if (!map.hasLayer(fallbackOsm)) {
+                fallbackOsm.addTo(map);
+            }
+        });
+
         window.setTileLayer = function(styleId) {
             if (currentLayer) map.removeLayer(currentLayer);
+            if (map.hasLayer(fallbackOsm)) map.removeLayer(fallbackOsm);
             currentLayer = tileLayers[styleId] || tileLayers.google;
             currentLayer.addTo(map);
         };
@@ -284,19 +339,19 @@ private fun generateMapHtml(initialStyle: String): String {
             if (!geofenceCircle) {
                 geofenceCircle = L.circle([lat, lng], {
                     radius: radius,
-                    color: '#EA4335',
+                    color: '#00E5FF',
+                    fillColor: '#00E5FF',
+                    fillOpacity: 0.18,
                     weight: 2,
-                    dashArray: '5, 5',
-                    fillColor: '#EA4335',
-                    fillOpacity: 0.16
+                    dashArray: '5, 8'
                 }).addTo(map);
             } else {
                 geofenceCircle.setLatLng([lat, lng]);
                 geofenceCircle.setRadius(radius);
             }
 
-            updateRoute();
             fitBoth();
+            updateRoute();
         };
 
         window.clearDestination = function() {
@@ -353,6 +408,17 @@ private fun generateMapHtml(initialStyle: String): String {
         window.zoomOut = function() {
             map.zoomOut();
         };
+
+        // Force resize so tiles calculate viewport correctly
+        function triggerResize() {
+            if (map) {
+                map.invalidateSize();
+            }
+        }
+        window.addEventListener('resize', triggerResize);
+        setTimeout(triggerResize, 100);
+        setTimeout(triggerResize, 400);
+        setTimeout(triggerResize, 1200);
 
         // Tap on map to set destination
         map.on('click', function(e) {

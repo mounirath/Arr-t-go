@@ -156,6 +156,12 @@ fun ArrivaAppScreen(viewModel: MainViewModel) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // Layer 0: Vivid Glass Backdrop Mesh (ambient background beneath map and glass)
+            GlassBackdropMesh(
+                alpha = 0.50f,
+                modifier = Modifier.fillMaxSize()
+            )
+
             // Layer 1: Google Maps Fullscreen Interactive View
             ArrivaMapView(
                 userLocation = userLocation,
@@ -169,12 +175,6 @@ fun ArrivaAppScreen(viewModel: MainViewModel) {
                 centerDestTrigger = centerDestTrigger,
                 zoomInTrigger = zoomInTrigger,
                 zoomOutTrigger = zoomOutTrigger
-            )
-
-            // Layer 1.5: Vivid Glass Backdrop Mesh (glowing chromatic orbs bleeding through glass panels)
-            GlassBackdropMesh(
-                alpha = 0.50f,
-                modifier = Modifier.fillMaxSize()
             )
 
             // Layer 2: Google Maps Right-Hand Floating Controls (Center, Fullscreen, Layers, + , -)
