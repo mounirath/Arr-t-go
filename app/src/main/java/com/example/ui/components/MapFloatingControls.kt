@@ -1,15 +1,15 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.AppLanguage
 import com.example.model.MapStyle
+import com.example.ui.theme.GlassTokens
 
 @Composable
 fun MapFloatingControls(
@@ -60,8 +61,8 @@ fun MapFloatingControls(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 1. Center on GPS Location Button
-        FloatingMapButton(
+        // 1. Center on GPS Location Glass Button
+        FloatingGlassMapButton(
             icon = Icons.Default.MyLocation,
             contentDescription = "Center on my location",
             testTag = "btn_center_location",
@@ -69,8 +70,8 @@ fun MapFloatingControls(
             onClick = onCenterLocation
         )
 
-        // 2. Fullscreen / Focus Mode Button
-        FloatingMapButton(
+        // 2. Fullscreen / Focus Mode Glass Button
+        FloatingGlassMapButton(
             icon = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
             contentDescription = "Toggle full map view",
             testTag = "btn_toggle_fullscreen",
@@ -78,9 +79,9 @@ fun MapFloatingControls(
             onClick = onToggleFullscreen
         )
 
-        // 3. Layers / Map Style Button
+        // 3. Layers / Map Style Glass Button
         Box {
-            FloatingMapButton(
+            FloatingGlassMapButton(
                 icon = Icons.Default.Layers,
                 contentDescription = "Map Style Layers",
                 testTag = "btn_map_layers",
@@ -91,7 +92,9 @@ fun MapFloatingControls(
             DropdownMenu(
                 expanded = isLayersMenuOpen,
                 onDismissRequest = { isLayersMenuOpen = false },
-                modifier = Modifier.background(Color(0xFF13182C))
+                modifier = Modifier
+                    .background(Color(0xFF13182C).copy(alpha = 0.95f))
+                    .border(BorderStroke(1.dp, GlassTokens.GlassBorderBrush))
             ) {
                 MapStyle.values().forEach { style ->
                     DropdownMenuItem(
@@ -120,8 +123,8 @@ fun MapFloatingControls(
             }
         }
 
-        // 4. Zoom In Button (+)
-        FloatingMapButton(
+        // 4. Zoom In Glass Button (+)
+        FloatingGlassMapButton(
             icon = Icons.Default.Add,
             contentDescription = "Zoom in",
             testTag = "btn_zoom_in",
@@ -129,8 +132,8 @@ fun MapFloatingControls(
             onClick = onZoomIn
         )
 
-        // 5. Zoom Out Button (-)
-        FloatingMapButton(
+        // 5. Zoom Out Glass Button (-)
+        FloatingGlassMapButton(
             icon = Icons.Default.Remove,
             contentDescription = "Zoom out",
             testTag = "btn_zoom_out",
@@ -141,30 +144,43 @@ fun MapFloatingControls(
 }
 
 @Composable
-private fun FloatingMapButton(
+private fun FloatingGlassMapButton(
     icon: ImageVector,
     contentDescription: String,
     testTag: String,
     tint: Color,
     onClick: () -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = Color(0xFF1E243A).copy(alpha = 0.94f),
-        shadowElevation = 8.dp,
+    Box(
         modifier = Modifier
             .size(46.dp)
-            .testTag(testTag)
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(22.dp)
+            .shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(16.dp),
+                spotColor = Color(0xFF4F46E5).copy(alpha = 0.35f)
             )
-        }
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF1F294C).copy(alpha = 0.72f),
+                        Color(0xFF0E1428).copy(alpha = 0.84f)
+                    )
+                )
+            )
+            .border(
+                BorderStroke(1.dp, GlassTokens.GlassBorderBrush),
+                RoundedCornerShape(16.dp)
+            )
+            .clickable(onClick = onClick)
+            .testTag(testTag),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(22.dp)
+        )
     }
 }

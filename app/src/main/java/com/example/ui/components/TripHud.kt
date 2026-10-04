@@ -37,7 +37,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -65,14 +67,28 @@ fun TripHud(
         exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
         modifier = modifier
     ) {
-        Surface(
-            shape = RoundedCornerShape(22.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-            shadowElevation = 12.dp,
-            tonalElevation = 6.dp,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 6.dp)
+                .shadow(
+                    elevation = 18.dp,
+                    shape = RoundedCornerShape(22.dp),
+                    spotColor = Color(0xFF4F46E5).copy(alpha = 0.4f)
+                )
+                .clip(RoundedCornerShape(22.dp))
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF1E284A).copy(alpha = 0.82f),
+                            Color(0xFF0F1528).copy(alpha = 0.92f)
+                        )
+                    )
+                )
+                .border(
+                    androidx.compose.foundation.BorderStroke(1.dp, com.example.ui.theme.GlassTokens.GlassBorderBrush),
+                    RoundedCornerShape(22.dp)
+                )
         ) {
             Column(
                 modifier = Modifier

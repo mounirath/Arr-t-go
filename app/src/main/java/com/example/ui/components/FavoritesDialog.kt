@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -64,6 +65,11 @@ fun FavoritesDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Color(0xFF13182C).copy(alpha = 0.94f),
+        modifier = Modifier.border(
+            androidx.compose.foundation.BorderStroke(1.dp, com.example.ui.theme.GlassTokens.GlassBorderBrush),
+            RoundedCornerShape(28.dp)
+        ),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -202,6 +208,11 @@ fun AddFavoriteDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Color(0xFF13182C).copy(alpha = 0.94f),
+        modifier = Modifier.border(
+            androidx.compose.foundation.BorderStroke(1.dp, com.example.ui.theme.GlassTokens.GlassBorderBrush),
+            RoundedCornerShape(28.dp)
+        ),
         title = {
             Text(
                 text = when (currentLanguage) {

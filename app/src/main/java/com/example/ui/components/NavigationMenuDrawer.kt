@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,26 +14,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsTransit
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.GpsFixed
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -40,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.model.AlarmTone
 import com.example.model.AppLanguage
+import com.example.ui.theme.GlassTokens
 
 @Composable
 fun NavigationMenuDialog(
@@ -68,12 +62,28 @@ fun NavigationMenuDialog(
     if (!isOpen) return
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = Color(0xFF13182C),
-            border = BorderStroke(1.2.dp, Color(0xFF283256)),
-            shadowElevation = 24.dp,
-            modifier = Modifier.fillMaxWidth()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 24.dp,
+                    shape = RoundedCornerShape(28.dp),
+                    spotColor = Color(0xFF6366F1).copy(alpha = 0.5f),
+                    ambientColor = Color.Black.copy(alpha = 0.6f)
+                )
+                .clip(RoundedCornerShape(28.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF1E274A).copy(alpha = 0.90f),
+                            Color(0xFF0F1528).copy(alpha = 0.95f)
+                        )
+                    )
+                )
+                .border(
+                    BorderStroke(1.dp, GlassTokens.GlassBorderBrush),
+                    RoundedCornerShape(28.dp)
+                )
         ) {
             Column(
                 modifier = Modifier
@@ -86,11 +96,18 @@ fun NavigationMenuDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = Color.White
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
 
@@ -127,24 +144,38 @@ fun NavigationMenuDialog(
                 ) {
                     AppLanguage.values().forEach { lang ->
                         val isSelected = currentLanguage == lang
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) Color(0xFF0284C7) else Color(0xFF1E243A),
-                            border = if (isSelected) null else BorderStroke(1.dp, Color(0xFF2C3960)),
+                        Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(38.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .clickable { onLanguageChange(lang) }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = lang.label,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = Color.White
+                                .background(
+                                    if (isSelected) {
+                                        Brush.horizontalGradient(
+                                            listOf(Color(0xFF0284C7), Color(0xFF00E5FF))
+                                        )
+                                    } else {
+                                        Brush.linearGradient(
+                                            listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.08f))
+                                        )
+                                    }
                                 )
-                            }
+                                .border(
+                                    BorderStroke(
+                                        1.dp,
+                                        if (isSelected) Color.White.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.15f)
+                                    ),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable { onLanguageChange(lang) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = lang.label,
+                                fontSize = 13.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = Color.White
+                            )
                         }
                     }
                 }
@@ -157,13 +188,12 @@ fun NavigationMenuDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Test tone button
                     OutlinedButton(
                         onClick = onTestToneToggle,
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, Color(0xFF8B5CF6)),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = if (isTestingTone) Color(0xFF8B5CF6) else Color.Transparent,
+                            containerColor = if (isTestingTone) Color(0xFF8B5CF6) else Color.White.copy(alpha = 0.08f),
                             contentColor = Color.White
                         ),
                         modifier = Modifier.height(34.dp)
@@ -195,28 +225,34 @@ fun NavigationMenuDialog(
                 ) {
                     AlarmTone.values().forEach { tone ->
                         val isSelected = selectedTone == tone
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) Color(0xFF6366F1).copy(alpha = 0.35f) else Color(0xFF1E243A),
-                            border = BorderStroke(1.2.dp, if (isSelected) Color(0xFF8B5CF6) else Color(0xFF2C3960)),
+                        Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(44.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .clickable { onToneChange(tone) }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = when (currentLanguage) {
-                                        AppLanguage.AR -> tone.labelAr
-                                        AppLanguage.EN -> tone.labelEn
-                                        AppLanguage.FR -> tone.labelFr
-                                    },
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) Color.White else Color(0xFF94A3B8)
+                                .background(
+                                    if (isSelected) Color(0xFF6366F1).copy(alpha = 0.35f) else Color.White.copy(alpha = 0.08f)
                                 )
-                            }
+                                .border(
+                                    BorderStroke(
+                                        1.2.dp,
+                                        if (isSelected) Color(0xFF8B5CF6) else Color.White.copy(alpha = 0.15f)
+                                    ),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable { onToneChange(tone) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = when (currentLanguage) {
+                                    AppLanguage.AR -> tone.labelAr
+                                    AppLanguage.EN -> tone.labelEn
+                                    AppLanguage.FR -> tone.labelFr
+                                },
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) Color.White else Color(0xFFCBD5E1)
+                            )
                         }
                     }
                 }
@@ -298,14 +334,15 @@ fun NavigationMenuDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Manage Favorites Button
+                // Manage Favorites Glass Button
                 Button(
                     onClick = {
                         onDismiss()
                         onOpenFavoritesManager()
                     },
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E243A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.10f)),
+                    border = BorderStroke(1.dp, GlassTokens.GlassBorderBrush),
                     modifier = Modifier.fillMaxWidth().height(48.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

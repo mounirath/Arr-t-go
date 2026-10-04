@@ -45,6 +45,7 @@ import com.example.ui.MainViewModel
 import com.example.ui.components.AddFavoriteDialog
 import com.example.ui.components.AlarmOverlay
 import com.example.ui.components.FavoritesDialog
+import com.example.ui.components.GlassBackdropMesh
 import com.example.ui.components.GoogleMapsBottomSheet
 import com.example.ui.components.GoogleMapsTopBar
 import com.example.ui.components.MapFloatingControls
@@ -168,6 +169,12 @@ fun ArrivaAppScreen(viewModel: MainViewModel) {
                 centerDestTrigger = centerDestTrigger,
                 zoomInTrigger = zoomInTrigger,
                 zoomOutTrigger = zoomOutTrigger
+            )
+
+            // Layer 1.5: Vivid Glass Backdrop Mesh (glowing chromatic orbs bleeding through glass panels)
+            GlassBackdropMesh(
+                alpha = 0.50f,
+                modifier = Modifier.fillMaxSize()
             )
 
             // Layer 2: Google Maps Right-Hand Floating Controls (Center, Fullscreen, Layers, + , -)

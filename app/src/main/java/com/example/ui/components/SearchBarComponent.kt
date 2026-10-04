@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +29,6 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Train
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -53,11 +54,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.FavoritePlace
 import com.example.model.AppLanguage
 import com.example.model.LocationPoint
 import com.example.model.MapStyle
 import com.example.model.UserLocation
+import com.example.ui.theme.GlassTokens
 
 @Composable
 fun GoogleMapsTopBar(
@@ -80,7 +81,7 @@ fun GoogleMapsTopBar(
             .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
-        // Top Header: Hamburger Menu + ARRIVA Google Maps Pill
+        // Top Header: Hamburger Glass Button + ARRIVA Brand Glass Pill
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -88,40 +89,67 @@ fun GoogleMapsTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Hamburger Menu Button
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = Color(0xFF1E243A).copy(alpha = 0.94f),
-                shadowElevation = 6.dp,
+            // Hamburger Menu Glass Button
+            Box(
                 modifier = Modifier
                     .size(46.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .clickable(onClick = onOpenMenu)
-                    .testTag("btn_menu")
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        spotColor = Color(0xFF6366F1).copy(alpha = 0.3f)
                     )
-                }
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFF1E284A).copy(alpha = 0.75f),
+                                Color(0xFF0F1528).copy(alpha = 0.85f)
+                            )
+                        )
+                    )
+                    .border(
+                        BorderStroke(1.dp, GlassTokens.GlassBorderBrush),
+                        RoundedCornerShape(16.dp)
+                    )
+                    .clickable(onClick = onOpenMenu)
+                    .testTag("btn_menu"),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = "Menu",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
             }
 
-            // ARRIVA Brand Badge with Google dot & Navigation Icon
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = Color(0xFF13182C).copy(alpha = 0.95f),
-                border = BorderStroke(1.dp, Color(0xFF283256)),
-                shadowElevation = 6.dp,
-                modifier = Modifier.height(46.dp)
+            // ARRIVA Brand Badge with 1px Glass Border
+            Box(
+                modifier = Modifier
+                    .height(46.dp)
+                    .shadow(
+                        elevation = 14.dp,
+                        shape = RoundedCornerShape(24.dp),
+                        spotColor = Color(0xFF8B5CF6).copy(alpha = 0.35f)
+                    )
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFF19223D).copy(alpha = 0.78f),
+                                Color(0xFF0C1122).copy(alpha = 0.88f)
+                            )
+                        )
+                    )
+                    .border(
+                        BorderStroke(1.dp, GlassTokens.GlassBorderBrush),
+                        RoundedCornerShape(24.dp)
+                    )
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Google 4-Color Icon Dot
                     GoogleColorsIcon(modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
 
@@ -139,14 +167,14 @@ fun GoogleMapsTopBar(
                                 AppLanguage.FR -> "Google Maps • Alarme GPS Réveil"
                             },
                             fontSize = 9.sp,
-                            color = Color(0xFF94A3B8),
-                            fontWeight = FontWeight.Medium
+                            color = Color(0xFF00E5FF),
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
 
                     Spacer(modifier = Modifier.width(10.dp))
 
-                    // Purple circular navigation pill icon
+                    // Purple navigation glass circle
                     Box(
                         modifier = Modifier
                             .size(32.dp)
@@ -155,6 +183,10 @@ fun GoogleMapsTopBar(
                                 Brush.linearGradient(
                                     listOf(Color(0xFF8B5CF6), Color(0xFFD946EF))
                                 )
+                            )
+                            .border(
+                                BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
+                                CircleShape
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -169,15 +201,30 @@ fun GoogleMapsTopBar(
             }
         }
 
-        // Floating Search Capsule
-        Surface(
-            shape = RoundedCornerShape(22.dp),
-            color = Color(0xFF13182C).copy(alpha = 0.96f),
-            border = BorderStroke(1.dp, Color(0xFF2A345A)),
-            shadowElevation = 8.dp,
+        // Floating Glass Search Capsule
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
+                .shadow(
+                    elevation = 16.dp,
+                    shape = RoundedCornerShape(24.dp),
+                    spotColor = Color(0xFF38BDF8).copy(alpha = 0.25f),
+                    ambientColor = Color.Black.copy(alpha = 0.5f)
+                )
+                .clip(RoundedCornerShape(24.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF1D2644).copy(alpha = 0.75f),
+                            Color(0xFF0E1426).copy(alpha = 0.88f)
+                        )
+                    )
+                )
+                .border(
+                    BorderStroke(1.dp, GlassTokens.GlassBorderBrush),
+                    RoundedCornerShape(24.dp)
+                )
         ) {
             Row(
                 modifier = Modifier
@@ -188,7 +235,7 @@ fun GoogleMapsTopBar(
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = Color(0xFF8B5CF6),
+                    tint = Color(0xFF818CF8),
                     modifier = Modifier.size(22.dp)
                 )
 
@@ -205,7 +252,7 @@ fun GoogleMapsTopBar(
                                 AppLanguage.FR -> "Rechercher gare, adresse, arrêt ou lieu..."
                             },
                             fontSize = 13.sp,
-                            color = Color(0xFF8E9BB5),
+                            color = Color(0xFF94A3B8),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -234,7 +281,7 @@ fun GoogleMapsTopBar(
                 } else if (query.isNotBlank()) {
                     IconButton(
                         onClick = { onQueryChange("") },
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(26.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -247,7 +294,7 @@ fun GoogleMapsTopBar(
             }
         }
 
-        // Sub-filter pill row: [Google Maps ▾] and [GPS Accuracy Signal]
+        // Sub-filter pill row with Glass Surfaces
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -255,19 +302,33 @@ fun GoogleMapsTopBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Google Maps Layer selector pill
+            // Google Maps Layer selector glass pill
             Box {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFF192038).copy(alpha = 0.92f),
-                    border = BorderStroke(1.dp, Color(0xFF2C3960)),
+                Box(
                     modifier = Modifier
+                        .shadow(
+                            elevation = 8.dp,
+                            shape = RoundedCornerShape(16.dp),
+                            spotColor = Color(0xFF06B6D4).copy(alpha = 0.2f)
+                        )
                         .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFF1E2848).copy(alpha = 0.72f),
+                                    Color(0xFF0F152A).copy(alpha = 0.85f)
+                                )
+                            )
+                        )
+                        .border(
+                            BorderStroke(1.dp, GlassTokens.GlassBorderBrush),
+                            RoundedCornerShape(16.dp)
+                        )
                         .clickable { isMapStyleDropdownOpen = true }
                         .testTag("pill_map_style")
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = "▾ ", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -279,7 +340,7 @@ fun GoogleMapsTopBar(
                             },
                             color = Color.White,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         GoogleColorsIcon(modifier = Modifier.size(12.dp))
@@ -289,7 +350,9 @@ fun GoogleMapsTopBar(
                 DropdownMenu(
                     expanded = isMapStyleDropdownOpen,
                     onDismissRequest = { isMapStyleDropdownOpen = false },
-                    modifier = Modifier.background(Color(0xFF13182C))
+                    modifier = Modifier
+                        .background(Color(0xFF13182C).copy(alpha = 0.95f))
+                        .border(BorderStroke(1.dp, GlassTokens.GlassBorderBrush))
                 ) {
                     MapStyle.values().forEach { style ->
                         DropdownMenuItem(
@@ -312,21 +375,38 @@ fun GoogleMapsTopBar(
                 }
             }
 
-            // GPS Signal Precision pill
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Color(0xFF192038).copy(alpha = 0.92f),
-                border = BorderStroke(1.dp, Color(0xFF2C3960))
+            // GPS Signal Precision glass pill
+            Box(
+                modifier = Modifier
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        spotColor = Color(0xFF10B981).copy(alpha = 0.2f)
+                    )
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFF1E2848).copy(alpha = 0.72f),
+                                Color(0xFF0F152A).copy(alpha = 0.85f)
+                            )
+                        )
+                    )
+                    .border(
+                        BorderStroke(1.dp, GlassTokens.GlassBorderBrush),
+                        RoundedCornerShape(16.dp)
+                    )
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .size(8.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF10B981)) // Green active dot
+                            .background(Color(0xFF10B981))
+                            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.6f)), CircleShape)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     val accuracyText = if (userLocation.accuracyMeters > 0f) {
@@ -341,27 +421,41 @@ fun GoogleMapsTopBar(
                         },
                         color = Color.White,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
         }
 
-        // Autocomplete Search Results Overlay
+        // Autocomplete Search Results Overlay (Glass Card)
         AnimatedVisibility(
             visible = query.isNotBlank() && searchResults.isNotEmpty(),
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = Color(0xFF13182C).copy(alpha = 0.98f),
-                border = BorderStroke(1.dp, Color(0xFF2C3960)),
-                shadowElevation = 12.dp,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)
                     .heightIn(max = 240.dp)
+                    .shadow(
+                        elevation = 20.dp,
+                        shape = RoundedCornerShape(20.dp),
+                        spotColor = Color(0xFF4F46E5).copy(alpha = 0.4f)
+                    )
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFF1E2746).copy(alpha = 0.90f),
+                                Color(0xFF0E1428).copy(alpha = 0.95f)
+                            )
+                        )
+                    )
+                    .border(
+                        BorderStroke(1.dp, GlassTokens.GlassBorderBrush),
+                        RoundedCornerShape(20.dp)
+                    )
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
@@ -377,15 +471,16 @@ fun GoogleMapsTopBar(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(34.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFE11D48).copy(alpha = 0.15f)),
+                                    .background(Color(0xFFE11D48).copy(alpha = 0.25f))
+                                    .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.LocationOn,
                                     contentDescription = null,
-                                    tint = Color(0xFFE11D48),
+                                    tint = Color(0xFFF43F5E),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -401,7 +496,7 @@ fun GoogleMapsTopBar(
                                     Text(
                                         text = place.address,
                                         fontSize = 11.sp,
-                                        color = Color(0xFF94A3B8),
+                                        color = Color(0xFFCBD5E1),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -422,9 +517,9 @@ fun GoogleColorsIcon(modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0xFF4285F4))) // Blue
-        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0xFFEA4335))) // Red
-        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0xFFFBBC05))) // Yellow
-        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0xFF34A853))) // Green
+        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0xFF4285F4)))
+        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0xFFEA4335)))
+        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0xFFFBBC05)))
+        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0xFF34A853)))
     }
 }
