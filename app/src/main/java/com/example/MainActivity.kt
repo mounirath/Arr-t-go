@@ -52,6 +52,7 @@ import com.example.ui.components.MapFloatingControls
 import com.example.ui.components.NavigationMenuDialog
 import com.example.ui.components.TripHud
 import com.example.ui.map.ArrivaMapView
+import com.example.ui.map.GoogleMapsComposeView
 import com.example.ui.theme.ArrivaTheme
 
 class MainActivity : ComponentActivity() {
@@ -162,20 +163,39 @@ fun ArrivaAppScreen(viewModel: MainViewModel) {
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Layer 1: Google Maps Fullscreen Interactive View
-            ArrivaMapView(
-                userLocation = userLocation,
-                destination = destination,
-                alertRadiusMeters = alertRadius,
-                mapStyle = mapStyle,
-                onMapClick = { lat, lng ->
-                    viewModel.setMapClickedPoint(lat, lng)
-                },
-                centerUserTrigger = centerUserTrigger,
-                centerDestTrigger = centerDestTrigger,
-                zoomInTrigger = zoomInTrigger,
-                zoomOutTrigger = zoomOutTrigger
-            )
+            // Layer 1: Google Maps Fullscreen View (Native Google Maps Compose or Tiles Fallback)
+            val hasValidMapsKey = BuildConfig.MAPS_API_KEY.isNotBlank() &&
+                !BuildConfig.MAPS_API_KEY.contains("YOUR_GOOGLE_MAPS_API_KEY")
+
+            if (hasValidMapsKey) {
+                GoogleMapsComposeView(
+                    userLocation = userLocation,
+                    destination = destination,
+                    alertRadiusMeters = alertRadius,
+                    mapStyle = mapStyle,
+                    onMapClick = { lat, lng ->
+                        viewModel.setMapClickedPoint(lat, lng)
+                    },
+                    centerUserTrigger = centerUserTrigger,
+                    centerDestTrigger = centerDestTrigger,
+                    zoomInTrigger = zoomInTrigger,
+                    zoomOutTrigger = zoomOutTrigger
+                )
+            } else {
+                ArrivaMapView(
+                    userLocation = userLocation,
+                    destination = destination,
+                    alertRadiusMeters = alertRadius,
+                    mapStyle = mapStyle,
+                    onMapClick = { lat, lng ->
+                        viewModel.setMapClickedPoint(lat, lng)
+                    },
+                    centerUserTrigger = centerUserTrigger,
+                    centerDestTrigger = centerDestTrigger,
+                    zoomInTrigger = zoomInTrigger,
+                    zoomOutTrigger = zoomOutTrigger
+                )
+            }
 
             // Layer 2: Google Maps Right-Hand Floating Controls (Center, Fullscreen, Layers, + , -)
             MapFloatingControls(
