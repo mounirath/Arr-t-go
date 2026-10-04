@@ -19,10 +19,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
-        <!-- Google Maps API Key configured via Secrets Gradle Plugin and .env -->
+
+        <!-- Clé Google Maps insérée directement -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="${MAPS_API_KEY}" />
+            android:value="AIzaSyCq2wtmRNcXOYuV0sFCtn0SavzvLi4nlAU" />
 
         <activity
             android:name=".MainActivity"
@@ -31,7 +32,6 @@
             android:theme="@style/Theme.MyApplication">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
