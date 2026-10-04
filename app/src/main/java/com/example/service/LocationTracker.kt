@@ -190,9 +190,14 @@ class LocationTracker(private val context: Context) {
             toLat: Double,
             toLng: Double
         ): Float {
-            val results = FloatArray(1)
-            Location.distanceBetween(fromLat, fromLng, toLat, toLng, results)
-            return results[0]
+            val earthRadius = 6371000.0 // meters
+            val dLat = Math.toRadians(toLat - fromLat)
+            val dLng = Math.toRadians(toLng - fromLng)
+            val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(Math.toRadians(fromLat)) * Math.cos(Math.toRadians(toLat)) *
+                    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+            val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+            return (earthRadius * c).toFloat()
         }
     }
 }

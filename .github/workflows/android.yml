@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+env:
+  JAVA_OPTS: "-Djava.awt.headless=true"
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=\"-Xmx4g -Dfile.encoding=UTF-8 -Djava.awt.headless=true\""
+
 jobs:
   build:
     name: Build & Test ARRIVA Android App
@@ -26,14 +30,22 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      - name: Cache Robolectric Jars
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: ${{ runner.os }}-robolectric-34
+          restore-keys: |
+            ${{ runner.os }}-robolectric-
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Run Unit & Robolectric Tests
-        run: ./gradlew testDebugUnitTest --continue
+        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload Test Reports
         if: always()
@@ -44,6 +56,7 @@ jobs:
           retention-days: 7
 
       - name: Upload Debug APK Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ARRIVA-Debug-APK
